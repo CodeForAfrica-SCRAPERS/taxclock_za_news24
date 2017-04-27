@@ -1,7 +1,8 @@
 import os
 import boto3
 import requests
-import json, xmltodict
+import json
+import xmltodict
 
 
 s3 = boto3.client(
@@ -12,27 +13,31 @@ s3 = boto3.client(
 )
 
 r = requests.get('https://syndication.24.com/articles/Fin24/News/newsml',
-      auth = (
-        os.environ['MORPH_NEWS24_USERNAME'],
-        os.environ['MORPH_NEWS24_PASSWORD']
-      )
-    )
+                 auth=(os.environ['MORPH_NEWS24_USERNAME'],
+                       os.environ['MORPH_NEWS24_PASSWORD']))
 
 
-data = [];
+data = []
 xml = xmltodict.parse(r.content)
 
 for index, news_item in enumerate(xml['NewsML']['NewsItem']):
-  news_item = news_item['NewsComponent']['NewsComponent']['NewsComponent']
-  data.append({
-    'title': news_item['NewsLines']['HeadLine'],
-    'description': news_item['NewsLines']['SlugLine'],
-    'link': news_item['NewsLines']['MoreLink'],
-    'img': news_item['ContentItem']['DataContent']['nitf']['body']['body.content']['media']['media-reference']['@source'],
+    news_item = news_item['NewsComponent']['NewsComponent']['NewsComponent']
+
+    # When it's a video, there is no image.
+    try:
+        img = news_item['ContentItem']['DataContent']['nitf']['body']['body.content']['media']['media-reference']['@source']
+    except Exception as e:
+        img = 'https://taxclock-za.codeforafrica.org/img/fin24-square.png'
+
+    data.append({
+        'title': news_item['NewsLines']['HeadLine'],
+        'description': news_item['NewsLines']['SlugLine'],
+        'link': news_item['NewsLines']['MoreLink'],
+        'img': img
     })
 
-  if index == 5:
-    break
+    if index == 5:
+        break
 
 
 s3.put_object(
