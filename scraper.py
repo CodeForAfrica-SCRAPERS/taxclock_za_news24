@@ -47,4 +47,4 @@ s3.put_object(
     Body=json.dumps(data)
 )
 
-print "Successfully finished."
+print("Successfully finished.")
